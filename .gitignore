@@ -102,3 +102,18 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# archive files
+*.7z
+*.gz
+*.rar
+*.tar
+*.war
+*.zip
+
+# misc files
+*.log
+*.bak
+*.swp
+*.tmp
+*~
