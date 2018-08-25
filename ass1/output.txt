@@ -1,0 +1,183 @@
+
+
+
+###############################
+Question 1: Merge the datasests
+###############################
+
+
+
+First 5 rows:
+
+
+                        Rubish  SummerGames SummerGold SummerSilver SummerBronze SummerTotal  WinterGames WinterGold WinterSilver WinterBronze WinterTotal  TotalGames TotalGold TotalSilver TotalBronze TotalMedals
+Afghanistan (AFG)          BLA         14.0          0            0            2           2          0.0          0            0            0           0        14.0         0           0           2           2
+Algeria (ALG)              BLA         13.0          5            4            8          17          3.0          0            0            0           0        16.0         5           4           8          17
+Argentina (ARG)            BLA         24.0         21           25           28          74         19.0          0            0            0           0        43.0        21          25          28          74
+Armenia (ARM)              BLA          6.0          2            6            6          14          7.0          0            0            0           0        13.0         2           6           6          14
+Australasia (ANZ) [ANZ]    BLA          2.0          3            4            5          12          0.0          0            0            0           0         2.0         3           4           5          12
+
+
+
+#####################################
+Question 2: Display the first country
+#####################################
+
+
+
+The first country is: Afghanistan (AFG)
+
+Afghanistan (AFG)'s medals are:
+Rubish          BLA
+SummerGames      14
+SummerGold        0
+SummerSilver      0
+SummerBronze      2
+SummerTotal       2
+WinterGames       0
+WinterGold        0
+WinterSilver      0
+WinterBronze      0
+WinterTotal       0
+TotalGames       14
+TotalGold         0
+TotalSilver       0
+TotalBronze       2
+TotalMedals       2
+Name: Afghanistan (AFG), dtype: object
+
+
+
+####################################
+Question 3: Remove the Rubish column
+####################################
+
+
+
+First 5 rows:
+
+
+                         SummerGames SummerGold SummerSilver SummerBronze SummerTotal  WinterGames WinterGold WinterSilver WinterBronze WinterTotal  TotalGames TotalGold TotalSilver TotalBronze TotalMedals
+Afghanistan (AFG)               14.0          0            0            2           2          0.0          0            0            0           0        14.0         0           0           2           2
+Algeria (ALG)                   13.0          5            4            8          17          3.0          0            0            0           0        16.0         5           4           8          17
+Argentina (ARG)                 24.0         21           25           28          74         19.0          0            0            0           0        43.0        21          25          28          74
+Armenia (ARM)                    6.0          2            6            6          14          7.0          0            0            0           0        13.0         2           6           6          14
+Australasia (ANZ) [ANZ]          2.0          3            4            5          12          0.0          0            0            0           0         2.0         3           4           5          12
+
+
+
+#################################
+Question 4: Remove rows with NaNs
+#################################
+
+
+
+Last 10 rows:
+
+
+                                              SummerGames SummerGold SummerSilver SummerBronze SummerTotal  WinterGames WinterGold WinterSilver WinterBronze WinterTotal  TotalGames TotalGold TotalSilver TotalBronze TotalMedals
+Virgin Islands (ISV)                                 12.0          0            1            0           1          7.0          0            0            0           0        19.0         0           1           0           1
+Yugoslavia (YUG) [YUG]                               18.0         28           31           31          90         16.0          0            3            1           4        34.0        28          34          32          94
+Zambia (ZAM) [ZAM]                                   13.0          0            1            1           2          0.0          0            0            0           0        13.0         0           1           1           2
+Zimbabwe (ZIM) [ZIM]                                 13.0          3            4            1           8          1.0          0            0            0           0        14.0         3           4           1           8
+Unified Team (EUN) [EUN]                              1.0         45           38           29         112          1.0          9            6            8          23         2.0        54          44          37         135
+Independent Olympic Athletes (IOA) [IOA]              3.0          1            0            1           2          0.0          0            0            0           0         3.0         1           0           1           2
+Independent Olympic Participants (IOP) [IOP]          1.0          0            1            2           3          0.0          0            0            0           0         1.0         0           1           2           3
+Olympic Athletes from Russia (OAR) [OAR]              0.0          0            0            0           0          1.0          2            6            9          17         1.0         2           6           9          17
+Mixed team (ZZX) [ZZX]                                3.0          8            5            4          17          0.0          0            0            0           0         3.0         8           5           4          17
+Totals                                               28.0      5,115        5,080        5,482      15,677         23.0      1,060        1,058        1,050       3,168        51.0     6,175       6,138       6,532      18,845
+
+
+
+############################################
+Question 5: Most gold medals in summer games
+############################################
+
+
+
+The country with the most summer gold medals is United States (USA) [P] [Q] [R] [Z], with 1022 medals
+
+Details:
+
+                                     SummerGames  SummerGold  SummerSilver  SummerBronze  SummerTotal  WinterGames  WinterGold  WinterSilver  WinterBronze  WinterTotal  TotalGames  TotalGold  TotalSilver  TotalBronze  TotalMedals
+United States (USA) [P] [Q] [R] [Z]         27.0        1022           795           705         2522         23.0         105           110            90          305        50.0       1127          905          795         2827
+
+
+
+#########################################################
+Question 6: Comparing summer and winter gold medal counts
+#########################################################
+
+
+
+The country with the biggest difference between summer and winter gold medal counts is United States (USA) [P] [Q] [R] [Z], with a difference of 917 medals
+
+Details:
+
+                                     SummerGames  SummerGold  SummerSilver  SummerBronze  SummerTotal  WinterGames  WinterGold  WinterSilver  WinterBronze  WinterTotal  TotalGames  TotalGold  TotalSilver  TotalBronze  TotalMedals
+United States (USA) [P] [Q] [R] [Z]         27.0        1022           795           705         2522         23.0         105           110            90          305        50.0       1127          905          795         2827
+
+
+
+############################
+Question 7: Sorted countries
+############################
+
+
+
+First 5 rows:
+
+
+                                     SummerGames  SummerGold  SummerSilver  SummerBronze  SummerTotal  WinterGames  WinterGold  WinterSilver  WinterBronze  WinterTotal  TotalGames  TotalGold  TotalSilver  TotalBronze  TotalMedals
+United States (USA) [P] [Q] [R] [Z]         27.0        1022           795           705         2522         23.0         105           110            90          305        50.0       1127          905          795         2827
+Soviet Union (URS) [URS]                     9.0         395           319           296         1010          9.0          78            57            59          194        18.0        473          376          355         1204
+Great Britain (GBR) [GBR] [Z]               28.0         263           295           291          849         23.0          11             4            16           31        51.0        274          299          307          880
+Germany (GER) [GER] [Z]                     16.0         191           194           230          615         12.0          92            88            60          240        28.0        283          282          290          855
+France (FRA) [O] [P] [Z]                    28.0         212           241           263          716         23.0          36            35            53          124        51.0        248          276          316          840
+
+
+
+Last 5 rows:
+
+
+                SummerGames  SummerGold  SummerSilver  SummerBronze  SummerTotal  WinterGames  WinterGold  WinterSilver  WinterBronze  WinterTotal  TotalGames  TotalGold  TotalSilver  TotalBronze  TotalMedals
+Cyprus (CYP)           10.0           0             1             0            1         11.0           0             0             0            0        21.0          0            1            0            1
+Samoa (SAM)             9.0           0             1             0            1          0.0           0             0             0            0         9.0          0            1            0            1
+Senegal (SEN)          14.0           0             1             0            1          5.0           0             0             0            0        19.0          0            1            0            1
+Botswana (BOT)         10.0           0             1             0            1          0.0           0             0             0            0        10.0          0            1            0            1
+Iraq (IRQ)             14.0           0             0             1            1          0.0           0             0             0            0        14.0          0            0            1            1
+
+
+
+######################################
+Question 8: Top 10 countries bar chart
+######################################
+
+
+
+               Summer Games  Winter Games
+United States          2522           305
+Soviet Union           1010           194
+Great Britain           849            31
+Germany                 615           240
+France                  716           124
+Italy                   577           124
+Sweden                  494           158
+China                   546            62
+Russia                  426           120
+Norway                  152           368
+
+
+
+########################################
+Question 9: Country comparison bar chart
+########################################
+
+
+
+               Bronze  Silver  Gold
+United States      90     110   105
+Australia           5       5     5
+Great Britain      16       4    11
+Japan              22      22    14
+New Zealand         2       1     0
