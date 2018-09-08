@@ -74,11 +74,29 @@ class Collections(Resource):
 
 		return response(time, indicator_id, name), 201
 
-#retreive indicator data fro all countries from world bank api
+@api.route('/collections/<string:collection_id>')
+@api.param('collection_id', 'An economic indicator, ' + \
+	'chosen from http://api.worldbank.org/v2/indicators')
+class Collection(Resource):
+	@api.response(200, 'Collection successfully deleted')
+	@api.response(404, 'Collection does not exist')
+	@api.doc(description='Remove an existing collection')
+	def delete(self, collection_id):
+		query = { 'collection_id': { '$eq': collection_id } }
+
+		#check if collection actually exists first
+		indicators = list(collection.find(query))
+		if indicators == []:
+			return {collection_id: 'unknown collection'}, 404
+
+		collection.delete_one(query)
+		return {collection_id: 'collection removed'}, 200
+
+#retrieve indicator data fro all countries from world bank api
 #return a list of indicator data for each country in the form:
 #{'country': '', 'date': '', 'value': ''}
 def get_world_bank_data(indicator_id):
-	#humam-readable name of indicator
+	#human-readable name of indicator
 	#extracted from response and returned to caller for storing
 	name = ''
 
@@ -102,7 +120,7 @@ def get_world_bank_data(indicator_id):
 
 		#this should probably never happen
 		if res.status_code != 200:
-			raise Exception('error', 'unknown error occured', 503)
+			raise Exception('error', 'unknown error occurred', 503)
 
 		#handle invalid indicator ids naively
 		try:
