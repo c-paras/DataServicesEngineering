@@ -59,8 +59,11 @@ class Collections(Resource):
 			return {err_type: err_msg}, err_code
 
 		#construct document to store in db
+		#some responses require different names for some fields
+		#so store all field names and remove unwanted ones later
 		time = get_time()
 		to_store = {
+			'location': '/collections/' + indicator_id,
 			'collection_id': indicator_id,
 			'indicator': indicator_id,
 			'indicator_value': name,
@@ -73,6 +76,18 @@ class Collections(Resource):
 		collection.insert(to_store)
 
 		return response(time, indicator_id, name), 201
+
+	@api.response(200, 'Collections returned successfully')
+	@api.doc(description='Return all available collections')
+	def get(self):
+		all_stats = []
+		all_collections = list(collection.find())
+		for c in all_collections:
+			c.pop('_id', None)
+			c.pop('entries', None)
+			c.pop('indicator_value', None)
+			all_stats.append(c)
+		return all_stats, 200
 
 @api.route('/collections/<string:collection_id>')
 @api.param('collection_id', 'An economic indicator, ' + \
@@ -100,9 +115,9 @@ def get_world_bank_data(indicator_id):
 	#extracted from response and returned to caller for storing
 	name = ''
 
-	#world bank paginates responses, assume 10 pages initially
+	#world bank paginates responses, assume 5 pages initially
 	#update to real number of pages after 1st request
-	num_pages = 10
+	num_pages = 5
 
 	#retrieve data from world bank api page by page
 	url = worldbank_url + indicator_id
@@ -128,7 +143,9 @@ def get_world_bank_data(indicator_id):
 		except:
 			raise Exception('indicator_id', 'unknown', 400)
 
-		num_pages = res.json()[0]['pages']
+		#speed up while debugging, by only processing a subset
+		if not debug:
+			num_pages = res.json()[0]['pages']
 		data = res.json()[1]
 
 		#reformat indicator info for each country before storing
@@ -168,5 +185,5 @@ if __name__ == '__main__':
 	worldbank_url = 'http://api.worldbank.org/' + \
 		worldbank_version + '/countries/all/indicators/'
 
-	debug = True
+	debug = True #TODO: disable debug flag
 	app.run(debug=True)
