@@ -35,11 +35,14 @@ class Collections(Resource):
 	@api.expect(params)
 	@api.response(201, 'Imported collection successfully')
 	@api.response(200, 'Collection already imported previously')
-	@api.response(400, 'Unknown economic indicator')
+	@api.response(400, 'Missing or unknown economic indicator')
 	@api.response(503, 'Problem with World Bank API')
 	@api.doc(description='Import economic indicator data from World Bank')
 	def post(self):
-		indicator_id = request.json['indicator_id']
+		try:
+			indicator_id = request.json['indicator_id']
+		except:
+			return {'error': 'missing parameter: indicator_id'}, 400
 
 		#check if document for specified indicator already exists
 		stored = list(collection.find(
@@ -119,6 +122,49 @@ class Collection(Resource):
 			return {collection_id: 'unknown collection'}, 404
 		indicators[0].pop('_id')
 		indicators[0].pop('location')
+		return indicators[0], 200
+
+@api.route('/collections/<string:collection_id>/<int:year>/<string:country>')
+@api.param('collection_id', 'An economic indicator, ' + \
+	'chosen from http://api.worldbank.org/v2/indicators')
+@api.param('year', 'Year of interest, between 2012 and 2017')
+@api.param('country', 'Country of interest, ' + \
+	'chosen from http://api.worldbank.org/v2/countries')
+class Country(Resource):
+	@api.response(200, 'Collection returned successfully')
+	@api.response(404, 'Collection does not exist')
+	@api.response(400, 'Invalid parameters')
+	@api.doc(description='Return indicator value for a country and year')
+	def get(self, collection_id, year, country):
+		query = { 'collection_id': { '$eq': collection_id } }
+
+		#check if collection actually exists first
+		indicators = list(collection.find(query))
+		if indicators == []:
+			return {collection_id: 'unknown collection'}, 404
+
+		#now extract relevant info from the collection
+		indicators[0].pop('_id')
+		indicators[0].pop('location')
+		indicators[0].pop('indicator_value')
+		indicators[0].pop('creation_time')
+
+		#then validate the provided year
+		if year < 2012 or year > 2017:
+			return {year: 'invalid year'}, 400
+
+		#find the country and year requested
+		found = False
+		for entry in indicators[0]['entries']:
+			if entry['country'] == country and entry['date'] == str(year):
+				indicators[0]['country'] = country
+				indicators[0]['year'] = year
+				indicators[0]['value'] = entry['value']
+				found = True
+				break
+		if not found:
+			return {country: 'unknown country'}, 400
+		indicators[0].pop('entries')
 		return indicators[0], 200
 
 #retrieve indicator data fro all countries from world bank api
