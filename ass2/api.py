@@ -41,7 +41,7 @@ class Collections(Resource):
 	def post(self):
 		indicator_id = request.json['indicator_id']
 
-		#check if document already exists
+		#check if document for specified indicator already exists
 		stored = list(collection.find(
 			{ 'collection_id': { '$eq': indicator_id } }
 		))
@@ -51,39 +51,12 @@ class Collections(Resource):
 			name = stored[0]['indicator_value']
 			return response(time, indicator_id, name), 200
 
-		#retrieve data from world bank api
-		url = worldbank_url + indicator_id
-		payload = {'date': '2012:2017', 'format': 'json'}
-		res = requests.get(url, params=payload)
-		if debug:
-			print('Debugging:', res.url, res.status_code, '\n\n')
-
-		#this should probably never happen
-		if res.status_code != 200:
-			return {'error': 'unknown error occurred'}, 503
-
-		#handle invalid indicator ids naively
 		try:
-			res.json()[1]
-		except:
-			return {'indicator_id': 'unknown'}, 400
-
-		data = res.json()[1]
-		name = '' #name of the indicator, as extracted from data
-		entries = []
-
-		#reformat indicator info for each country before storing
-		for dat in data:
-			name = dat['indicator']['value']
-			formatted = {
-				'country': dat['country']['value'],
-				'date': dat['date'],
-				'value': dat['value']
-			}
-			if debug: print('Debugging:', formatted, '\n\n')
-			entries.append(formatted)
-
-		#TODO: pagination
+			name, entries = get_world_bank_data(indicator_id)
+		except Exception as err:
+			#most likely error: unknown indicator_id
+			err_type, err_msg, err_code = err.args
+			return {err_type: err_msg}, err_code
 
 		#construct document to store in db
 		time = get_time()
@@ -100,6 +73,59 @@ class Collections(Resource):
 		collection.insert(to_store)
 
 		return response(time, indicator_id, name), 201
+
+#retreive indicator data fro all countries from world bank api
+#return a list of indicator data for each country in the form:
+#{'country': '', 'date': '', 'value': ''}
+def get_world_bank_data(indicator_id):
+	#humam-readable name of indicator
+	#extracted from response and returned to caller for storing
+	name = ''
+
+	#world bank paginates responses, assume 10 pages initially
+	#update to real number of pages after 1st request
+	num_pages = 10
+
+	#retrieve data from world bank api page by page
+	url = worldbank_url + indicator_id
+	entries = []
+	page_number = 1
+	while page_number <= num_pages:
+		payload = {
+			'date': '2012:2017',
+			'format': 'json',
+			'page': page_number
+		}
+		res = requests.get(url, params=payload)
+		if debug:
+			print('Debugging:', res.url, res.status_code, '\n\n')
+
+		#this should probably never happen
+		if res.status_code != 200:
+			raise Exception('error', 'unknown error occured', 503)
+
+		#handle invalid indicator ids naively
+		try:
+			res.json()[1]
+		except:
+			raise Exception('indicator_id', 'unknown', 400)
+
+		num_pages = res.json()[0]['pages']
+		data = res.json()[1]
+
+		#reformat indicator info for each country before storing
+		for dat in data:
+			name = dat['indicator']['value']
+			formatted = {
+				'country': dat['country']['value'],
+				'date': dat['date'],
+				'value': dat['value']
+			}
+			if debug: print('Debugging:', formatted, '\n\n')
+			entries.append(formatted)
+
+		page_number += 1
+	return name, entries
 
 #construct json response based on arguments
 def response(creation_time, indicator_id, indicator_name):
