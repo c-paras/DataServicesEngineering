@@ -107,6 +107,20 @@ class Collection(Resource):
 		collection.delete_one(query)
 		return {collection_id: 'collection removed'}, 200
 
+	@api.response(200, 'Collection returned successfully')
+	@api.response(404, 'Collection does not exist')
+	@api.doc(description='Return data from a collection')
+	def get(self, collection_id):
+		query = { 'collection_id': { '$eq': collection_id } }
+
+		#check if collection actually exists first
+		indicators = list(collection.find(query))
+		if indicators == []:
+			return {collection_id: 'unknown collection'}, 404
+		indicators[0].pop('_id')
+		indicators[0].pop('location')
+		return indicators[0], 200
+
 #retrieve indicator data fro all countries from world bank api
 #return a list of indicator data for each country in the form:
 #{'country': '', 'date': '', 'value': ''}
@@ -115,9 +129,9 @@ def get_world_bank_data(indicator_id):
 	#extracted from response and returned to caller for storing
 	name = ''
 
-	#world bank paginates responses, assume 5 pages initially
+	#world bank paginates responses, assume 3 pages initially
 	#update to real number of pages after 1st request
-	num_pages = 5
+	num_pages = 3
 
 	#retrieve data from world bank api page by page
 	url = worldbank_url + indicator_id
