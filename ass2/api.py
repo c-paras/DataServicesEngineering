@@ -9,19 +9,13 @@ from pymongo import *
 from flask_restplus import *
 from flask import *
 
-connection_params = {
-	'user': 'ass2',
-	'password': 'comp9321',
-	'host': 'ds149742.mlab.com',
-	'port': 49742,
-	'namespace': 'worldbank',
-}
-
+#connect to mongodb database hosted on mlab
 connection = MongoClient('ds149742.mlab.com', 49742)
 db = connection['worldbank']
 db.authenticate('ass2', 'comp9321')
 collection = db.stats
 
+#initialize flask app
 app = Flask(__name__)
 api = Api(app, version='1.0',
 	default='Collections',
@@ -30,11 +24,6 @@ api = Api(app, version='1.0',
 	RESTful API for country-specific economic indicator data
 	Based on data provided by the World Bank API V2
 	''')
-
-def get_time():
-	curr_time = datetime.datetime.now()
-	formatted = curr_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-	return formatted
 
 @api.route('/collections/')
 class Collections(Resource):
@@ -47,23 +36,45 @@ class Collections(Resource):
 	@api.response(201, 'Imported collection successfully')
 	@api.response(200, 'Collection already imported previously')
 	@api.response(400, 'Unknown economic indicator')
+	@api.response(503, 'Problem with World Bank API')
 	@api.doc(description='Import economic indicator data from World Bank')
 	def post(self):
-		params = request.json
+		indicator_id = request.json['indicator_id']
 
-		url = worldbank_url + params['indicator_id']
+		#check if document already exists
+		stored = list(collection.find(
+			{ 'collection_id': { '$eq': indicator_id } }
+		))
+		if debug: print('Debugging:', stored, '\n\n')
+		if stored != []:
+			time = stored[0]['creation_time']
+			name = stored[0]['indicator_value']
+			return response(time, indicator_id, name), 200
+
+		#retrieve data from world bank api
+		url = worldbank_url + indicator_id
 		payload = {'date': '2012:2017', 'format': 'json'}
 		res = requests.get(url, params=payload)
-
 		if debug:
 			print('Debugging:', res.url, res.status_code, '\n\n')
 
-		#TODO: if invalid indicator id - 400
+		#this should probably never happen
+		if res.status_code != 200:
+			return {'error': 'unknown error occurred'}, 503
+
+		#handle invalid indicator ids naively
+		try:
+			res.json()[1]
+		except:
+			return {'indicator_id': 'unknown'}, 400
+
 		data = res.json()[1]
-		indicator_name = ''
+		name = '' #name of the indicator, as extracted from data
 		entries = []
+
+		#reformat indicator info for each country before storing
 		for dat in data:
-			indicator_name = dat['indicator']['value']
+			name = dat['indicator']['value']
 			formatted = {
 				'country': dat['country']['value'],
 				'date': dat['date'],
@@ -74,37 +85,44 @@ class Collections(Resource):
 
 		#TODO: pagination
 
-		i = params['indicator_id']
-		creation_time = get_time()
+		#construct document to store in db
+		time = get_time()
 		to_store = {
-			'collection_id': str(i),
-			'indicator': params['indicator_id'],
-			'indicator_value': indicator_name,
-			'creation_time': creation_time,
+			'collection_id': indicator_id,
+			'indicator': indicator_id,
+			'indicator_value': name,
+			'creation_time': time,
 			'entries': entries
 		}
 		if debug: print('Debugging: ', to_store, '\n\n')
 
+		#store document in mongodb collection
 		collection.insert(to_store)
-		stored = list(collection.find())
-		print('Debugging:', stored, '\n\n')
 
-		res = {
-			'location': '/collections/' + str(i),
-			'collection_id': str(i),
-			'creation_time': creation_time,
-			'indicator': params['indicator_id']
-		}
-		if debug: print('Debugging:', res)
-		return res, 201 #TODO: if already exists - 200
+		return response(time, indicator_id, name), 201
 
-def main():
-	pass
+#construct json response based on arguments
+def response(creation_time, indicator_id, indicator_name):
+	res = {
+		'location': '/collections/' + indicator_id,
+		'collection_id': indicator_id,
+		'creation_time': creation_time,
+		'indicator': indicator_name
+	}
+	return res
+
+#return the current time in iso format
+def get_time():
+	curr_time = datetime.datetime.now()
+	formatted = curr_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+	return formatted
 
 if __name__ == '__main__':
-	main()
+
+	#globals
 	worldbank_version = 'v2'
 	worldbank_url = 'http://api.worldbank.org/' + \
 		worldbank_version + '/countries/all/indicators/'
+
 	debug = True
 	app.run(debug=True)
