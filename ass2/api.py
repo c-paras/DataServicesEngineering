@@ -3,6 +3,7 @@
 #RESTful API for country-specific economic indicator data
 #Based on data provided by the World Bank API V2
 
+import re
 import datetime
 import requests
 from flask import *
@@ -183,21 +184,34 @@ class Country(Resource):
 @api.param('year', 'Year of interest, between ' + \
 	str(MIN_YR) + ' and ' + str(MAX_YR))
 class Year(Resource):
+	parser = reqparse.RequestParser()
+	parser.add_argument('query', type=str, help='Either "top&lt;N&gt;" or "bottom&lt;N&gt;" for some positive integer N')
+
+	@api.expect(parser)
 	@api.response(200, 'Data returned successfully')
 	@api.response(404, 'Collection does not exist')
 	@api.response(400, 'Invalid parameters')
 	@api.doc(description='Return sorted indicator values for a specified year')
 	def get(self, collection_id, year):
 		query = { 'collection_id': { '$eq': collection_id } }
+		sorting = request.args.get('query')
 
 		#check if collection actually exists first
 		indicators = list(collection.find(query))
 		if indicators == []:
 			return {collection_id: 'unknown collection'}, 404
 
-		#then validate the provided year
+		#then, validate the provided year
 		if year < MIN_YR or year > MAX_YR:
 			return {year: 'invalid year'}, 400
+
+		#next, validate the sorting parameter
+		if not sorting:
+			sorting = ''
+		else:
+			if not re.match(r'^(top|bottom)[1-9]\d*$', sorting):
+				return {sorting: 'invalid sorting query'}, 400
+		limit = re.sub(r'[a-z]+', '', sorting)
 
 		#now extract relevant info from the collection
 		indicators[0].pop('_id')
@@ -211,8 +225,11 @@ class Year(Resource):
 			if entry['date'] == str(year):
 				entries.append(entry)
 
-		entries.sort(key = (lambda x: x['value']))
-		#TODO: top10/bottom10 param
+		entries.sort(key = (lambda x: float(x['value'])), reverse=True)
+		if sorting and 'top' in sorting:
+			entries = entries[0:int(limit)]
+		elif sorting:
+			entries = entries[len(entries)-int(limit):len(entries)]
 		indicators[0]['entries'] = entries
 		return indicators[0], 200
 
