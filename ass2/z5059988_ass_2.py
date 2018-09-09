@@ -225,11 +225,16 @@ class Year(Resource):
 			if entry['date'] == str(year):
 				entries.append(entry)
 
+		#default sorting is descending
 		entries.sort(key = (lambda x: float(x['value'])), reverse=True)
+
+		#extract top/bottom 'limit' records
 		if sorting and 'top' in sorting:
 			entries = entries[0:int(limit)]
 		elif sorting:
 			entries = entries[len(entries)-int(limit):len(entries)]
+			entries.reverse()
+
 		indicators[0]['entries'] = entries
 		return indicators[0], 200
 
@@ -305,5 +310,5 @@ def get_time():
 	return formatted
 
 if __name__ == '__main__':
-	debug = True #TODO: disable debug flag
+	debug = False
 	app.run(debug=True)
