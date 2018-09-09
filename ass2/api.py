@@ -5,9 +5,15 @@
 
 import datetime
 import requests
+from flask import *
 from pymongo import *
 from flask_restplus import *
-from flask import *
+
+#globals
+WORLDBANK_VERSION = 'v2'
+WORLDBANK_BASE = 'http://api.worldbank.org/' + WORLDBANK_VERSION
+MIN_YR = 2012
+MAX_YR = 2017
 
 #connect to mongodb database hosted on mlab
 connection = MongoClient('ds149742.mlab.com', 49742)
@@ -17,13 +23,15 @@ collection = db.stats
 
 #initialize flask app
 app = Flask(__name__)
-api = Api(app, version='1.0',
+api = Api(app,
+	version='1.0',
 	default='Collections',
 	title='Economic Indicator API',
 	description='''
 	RESTful API for country-specific economic indicator data
 	Based on data provided by the World Bank API V2
-	''')
+	'''
+)
 
 @api.route('/collections/')
 class Collections(Resource):
@@ -86,15 +94,15 @@ class Collections(Resource):
 		all_stats = []
 		all_collections = list(collection.find())
 		for c in all_collections:
-			c.pop('_id', None)
-			c.pop('entries', None)
-			c.pop('indicator_value', None)
+			c.pop('_id')
+			c.pop('entries')
+			c.pop('indicator_value')
 			all_stats.append(c)
 		return all_stats, 200
 
 @api.route('/collections/<string:collection_id>')
 @api.param('collection_id', 'An economic indicator, ' + \
-	'chosen from http://api.worldbank.org/v2/indicators')
+	'chosen from ' + WORLDBANK_BASE + '/indicators/')
 class Collection(Resource):
 	@api.response(200, 'Collection successfully deleted')
 	@api.response(404, 'Collection does not exist')
@@ -120,16 +128,18 @@ class Collection(Resource):
 		indicators = list(collection.find(query))
 		if indicators == []:
 			return {collection_id: 'unknown collection'}, 404
+
 		indicators[0].pop('_id')
 		indicators[0].pop('location')
 		return indicators[0], 200
 
 @api.route('/collections/<string:collection_id>/<int:year>/<string:country>')
 @api.param('collection_id', 'An economic indicator, ' + \
-	'chosen from http://api.worldbank.org/v2/indicators')
-@api.param('year', 'Year of interest, between 2012 and 2017')
+	'chosen from ' + WORLDBANK_BASE + '/indicators/')
+@api.param('year', 'Year of interest, between ' + \
+	str(MIN_YR) + ' and ' + str(MAX_YR))
 @api.param('country', 'Country of interest, ' + \
-	'chosen from http://api.worldbank.org/v2/countries')
+	'chosen from ' + WORLDBANK_BASE + '/countries/')
 class Country(Resource):
 	@api.response(200, 'Collection returned successfully')
 	@api.response(404, 'Collection does not exist')
@@ -143,22 +153,22 @@ class Country(Resource):
 		if indicators == []:
 			return {collection_id: 'unknown collection'}, 404
 
+		#then validate the provided year
+		if year < MIN_YR or year > MAX_YR:
+			return {year: 'invalid year'}, 400
+
 		#now extract relevant info from the collection
 		indicators[0].pop('_id')
 		indicators[0].pop('location')
-		indicators[0].pop('indicator_value')
+		indicators[0]['indicator'] = indicators[0].pop('indicator_value')
 		indicators[0].pop('creation_time')
-
-		#then validate the provided year
-		if year < 2012 or year > 2017:
-			return {year: 'invalid year'}, 400
 
 		#find the country and year requested
 		found = False
 		for entry in indicators[0]['entries']:
 			if entry['country'] == country and entry['date'] == str(year):
 				indicators[0]['country'] = country
-				indicators[0]['year'] = year
+				indicators[0]['year'] = str(year)
 				indicators[0]['value'] = entry['value']
 				found = True
 				break
@@ -167,7 +177,7 @@ class Country(Resource):
 		indicators[0].pop('entries')
 		return indicators[0], 200
 
-#retrieve indicator data fro all countries from world bank api
+#retrieve indicator data for all countries from world bank api
 #return a list of indicator data for each country in the form:
 #{'country': '', 'date': '', 'value': ''}
 def get_world_bank_data(indicator_id):
@@ -180,12 +190,12 @@ def get_world_bank_data(indicator_id):
 	num_pages = 3
 
 	#retrieve data from world bank api page by page
-	url = worldbank_url + indicator_id
+	url = WORLDBANK_BASE + '/countries/all/indicators/' + indicator_id
 	entries = []
 	page_number = 1
 	while page_number <= num_pages:
 		payload = {
-			'date': '2012:2017',
+			'date': str(MIN_YR) + ':' + str(MAX_YR),
 			'format': 'json',
 			'page': page_number
 		}
@@ -239,11 +249,5 @@ def get_time():
 	return formatted
 
 if __name__ == '__main__':
-
-	#globals
-	worldbank_version = 'v2'
-	worldbank_url = 'http://api.worldbank.org/' + \
-		worldbank_version + '/countries/all/indicators/'
-
 	debug = True #TODO: disable debug flag
 	app.run(debug=True)
