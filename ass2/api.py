@@ -100,7 +100,7 @@ class Collections(Resource):
 			all_stats.append(c)
 		return all_stats, 200
 
-@api.route('/collections/<string:collection_id>')
+@api.route('/collections/<string:collection_id>/')
 @api.param('collection_id', 'An economic indicator, ' + \
 	'chosen from ' + WORLDBANK_BASE + '/indicators/')
 class Collection(Resource):
@@ -133,7 +133,7 @@ class Collection(Resource):
 		indicators[0].pop('location')
 		return indicators[0], 200
 
-@api.route('/collections/<string:collection_id>/<int:year>/<string:country>')
+@api.route('/collections/<string:collection_id>/<int:year>/<string:country>/')
 @api.param('collection_id', 'An economic indicator, ' + \
 	'chosen from ' + WORLDBANK_BASE + '/indicators/')
 @api.param('year', 'Year of interest, between ' + \
@@ -141,7 +141,7 @@ class Collection(Resource):
 @api.param('country', 'Country of interest, ' + \
 	'chosen from ' + WORLDBANK_BASE + '/countries/')
 class Country(Resource):
-	@api.response(200, 'Collection returned successfully')
+	@api.response(200, 'Data returned successfully')
 	@api.response(404, 'Collection does not exist')
 	@api.response(400, 'Invalid parameters')
 	@api.doc(description='Return indicator value for a country and year')
@@ -175,6 +175,45 @@ class Country(Resource):
 		if not found:
 			return {country: 'unknown country'}, 400
 		indicators[0].pop('entries')
+		return indicators[0], 200
+
+@api.route('/collections/<string:collection_id>/<int:year>/')
+@api.param('collection_id', 'An economic indicator, ' + \
+	'chosen from ' + WORLDBANK_BASE + '/indicators/')
+@api.param('year', 'Year of interest, between ' + \
+	str(MIN_YR) + ' and ' + str(MAX_YR))
+class Year(Resource):
+	@api.response(200, 'Data returned successfully')
+	@api.response(404, 'Collection does not exist')
+	@api.response(400, 'Invalid parameters')
+	@api.doc(description='Return sorted indicator values for a specified year')
+	def get(self, collection_id, year):
+		query = { 'collection_id': { '$eq': collection_id } }
+
+		#check if collection actually exists first
+		indicators = list(collection.find(query))
+		if indicators == []:
+			return {collection_id: 'unknown collection'}, 404
+
+		#then validate the provided year
+		if year < MIN_YR or year > MAX_YR:
+			return {year: 'invalid year'}, 400
+
+		#now extract relevant info from the collection
+		indicators[0].pop('_id')
+		indicators[0].pop('location')
+		indicators[0].pop('creation_time')
+		indicators[0].pop('collection_id')
+
+		#find the year requested
+		entries = []
+		for entry in indicators[0]['entries']:
+			if entry['date'] == str(year):
+				entries.append(entry)
+
+		entries.sort(key = (lambda x: x['value']))
+		#TODO: top10/bottom10 param
+		indicators[0]['entries'] = entries
 		return indicators[0], 200
 
 #retrieve indicator data for all countries from world bank api
