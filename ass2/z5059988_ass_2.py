@@ -41,7 +41,7 @@ class Collections(Resource):
 		{ 'indicator_id': fields.String }
 	)
 
-	@api.expect(params)
+	@api.expect(params, validate=True)
 	@api.response(201, 'Imported collection successfully')
 	@api.response(200, 'Collection already imported previously')
 	@api.response(400, 'Missing or unknown economic indicator')
@@ -76,7 +76,7 @@ class Collections(Resource):
 		time = get_time()
 		to_store = {
 			'location': '/collections/' + indicator_id,
-			'collection_id': indicator_id,
+			'collection_id': indicator_id, #indicator_id is unique
 			'indicator': indicator_id,
 			'indicator_value': name,
 			'creation_time': time,
@@ -161,7 +161,7 @@ class Country(Resource):
 		#now extract relevant info from the collection
 		indicators[0].pop('_id')
 		indicators[0].pop('location')
-		indicators[0]['indicator'] = indicators[0].pop('indicator_value')
+		indicators[0].pop('indicator_value')
 		indicators[0].pop('creation_time')
 
 		#find the country and year requested
@@ -209,6 +209,7 @@ class Year(Resource):
 		if not sorting:
 			sorting = ''
 		else:
+			#positive integer required for sorting
 			if not re.match(r'^(top|bottom)[1-9]\d*$', sorting):
 				return {sorting: 'invalid sorting query'}, 400
 		limit = re.sub(r'[a-z]+', '', sorting)
@@ -246,9 +247,10 @@ def get_world_bank_data(indicator_id):
 	#extracted from response and returned to caller for storing
 	name = ''
 
-	#world bank paginates responses, assume 3 pages initially
-	#update to real number of pages after 1st request
-	num_pages = 3
+	#world bank paginates responses, assume 2 pages initially
+	#previously, update to real number of pages after 1st request
+	#now, only first 2 pages needed, so no longer update
+	num_pages = 2
 
 	#retrieve data from world bank api page by page
 	url = WORLDBANK_BASE + '/countries/all/indicators/' + indicator_id
@@ -274,12 +276,11 @@ def get_world_bank_data(indicator_id):
 		except:
 			raise Exception('indicator_id', 'unknown', 400)
 
-		#speed up while debugging, by only processing a subset
-		if not debug:
-			num_pages = res.json()[0]['pages']
-		data = res.json()[1]
+		#only the first 2 pages are needed
+		#num_pages = res.json()[0]['pages']
 
 		#reformat indicator info for each country before storing
+		data = res.json()[1]
 		for dat in data:
 			name = dat['indicator']['value']
 			formatted = {
