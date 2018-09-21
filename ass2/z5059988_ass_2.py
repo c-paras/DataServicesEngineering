@@ -44,7 +44,8 @@ class Collections(Resource):
 	@api.expect(params, validate=True)
 	@api.response(201, 'Imported collection successfully')
 	@api.response(200, 'Collection already imported previously')
-	@api.response(400, 'Missing or unknown economic indicator')
+	@api.response(400, 'Missing economic indicator')
+	@api.response(404, 'Unknown economic indicator')
 	@api.response(503, 'Problem with World Bank API')
 	@api.doc(description='Import economic indicator data from World Bank')
 	def post(self):
@@ -185,7 +186,9 @@ class Country(Resource):
 	str(MIN_YR) + ' and ' + str(MAX_YR))
 class Year(Resource):
 	parser = reqparse.RequestParser()
-	parser.add_argument('query', type=str, help='Either "top&lt;N&gt;" or "bottom&lt;N&gt;" for some positive integer N')
+	parser.add_argument('query', type=str,
+		help='Either "top&lt;N&gt;" or "bottom&lt;N&gt; ' +
+		'for some integer N between 1 and 100 inclusive')
 
 	@api.expect(parser)
 	@api.response(200, 'Data returned successfully')
@@ -209,10 +212,12 @@ class Year(Resource):
 		if not sorting:
 			sorting = ''
 		else:
-			#positive integer required for sorting
-			if not re.match(r'^(top|bottom)[1-9]\d*$', sorting):
+			#integer between 1 and 100 required for sorting
+			if not re.match(r'^(top|bottom)\d+$', sorting):
 				return {sorting: 'invalid sorting query'}, 400
 		limit = re.sub(r'[a-z]+', '', sorting)
+		if limit and (not int(limit) >= 1 or not int(limit) <= 100):
+			return {sorting: 'sorting range must be between 1 and 100'}, 400
 
 		#now extract relevant info from the collection
 		indicators[0].pop('_id')
@@ -222,12 +227,17 @@ class Year(Resource):
 
 		#find the year requested
 		entries = []
+		nulls = []
 		for entry in indicators[0]['entries']:
 			if entry['date'] == str(year):
-				entries.append(entry)
+				if entry['value'] is None:
+					nulls.append(entry)
+				else:
+					entries.append(entry)
 
 		#default sorting is descending
-		entries.sort(key = (lambda x: float(x['value'])), reverse=True)
+		entries.sort(key = lambda x: float(x['value']), reverse=True)
+		entries = entries + nulls
 
 		#extract top/bottom 'limit' records
 		if sorting and 'top' in sorting:
@@ -274,7 +284,7 @@ def get_world_bank_data(indicator_id):
 		try:
 			res.json()[1]
 		except:
-			raise Exception('indicator_id', 'unknown', 400)
+			raise Exception('indicator_id', 'unknown', 404)
 
 		#only the first 2 pages are needed
 		#num_pages = res.json()[0]['pages']
